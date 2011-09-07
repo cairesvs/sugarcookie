@@ -106,6 +106,22 @@
 			};
 		}
 
+		function setupCannon() {
+			var cannon = document.createElement('div');
+			cannon.className = 'circle';
+			var radius = 20;
+			cannon.style.top = (window.innerHeight - radius) + 'px';
+			cannon.style.width = (2 * radius) + 'px';
+			cannon.style.minHeight = (2 * radius) + 'px';
+			cannon.style.borderRadius = radius + 'px';
+			cannon.style.zIndex = 9999;
+			document.body.appendChild(cannon);
+
+			window.addEventListener('mousemove', function(e){
+				cannon.style.left = (e.clientX - radius) + 'px';
+			}, false);
+		}
+
 		function animate(world, elements) {
 				function animateCallback() {
 					world.Step(0.016, 1);
@@ -126,7 +142,8 @@
 		var worldAABB = new b2AABB();
 		worldAABB.minVertex.Set(-200, -200);
 		worldAABB.maxVertex.Set(window.innerWidth + 200, window.innerHeight + 200);
-		var gravity = new b2Vec2(0, 500);
+		var gravity = new b2Vec2(1, 0);
+		setupCannon();
 		var doSleep = true;
 		var world = new b2World(worldAABB, gravity, doSleep);
 		var ball = new Circle(world, 20);
@@ -143,14 +160,14 @@
 		var elements = [ball, floor, ceiling, leftWall, rightWall];
 		animate(world, elements);
 		setTimeout(function() {
-			ball.body.ApplyImpulse(new b2Vec2(1000000, 0), new b2Vec2(0, 0));
+			ball.body.ApplyImpulse(new b2Vec2(1000000, 0), new b2Vec2(100, 100));
 		}, 1000);
 		window.addEventListener('click', function(e) {
 			if(newBall){
 				return;
 			}
 			newBall = new Circle(world, 20);
-			newBall.setPosition(e.clientX, e.clientY);
+			newBall.setPosition(e.clientX, 0.9 * window.innerHeight);
 			newBall.body.ApplyImpulse(new b2Vec2(0, -2000000), new b2Vec2(e.clientX, e.clientY));
 			elements.push(newBall);
 		}, false);
