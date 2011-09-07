@@ -26,6 +26,9 @@
 	<script type="text/javascript" language="javascript" charset="utf-8">
 	//<![CDATA[
 		Array.prototype.remove = function(index) {
+			if(typeof index == 'object')
+				index = this.indexOf(index);
+
 			this[index] = this[this.length - 1];
 			this.pop();
 		};
@@ -42,6 +45,7 @@
 				circleSd.friction = 0;
 				self.body = new b2BodyDef();
 				self.body.AddShape(circleSd);
+				self.body.position.Set(500, 500);
 				self.body = world.CreateBody(self.body);
 				self.body.userData = circleId++;
 				self.circle = document.createElement('div');
@@ -109,13 +113,10 @@
 						elements[i].updateView();
 					}
 					
-					if (elements[0].body.GetContactList() && elements[0].body.GetContactList().other.userData) {
-						for (var i = 0; i < elements.length; i++) {
-							if (elements[i].body == elements[0].body.GetContactList().other) {
-								elements[i].destroy();
-								elements.remove(i);
-							}
-						}
+					if(newBall != null && newBall.body.GetContactList() && newBall.body.GetContactList().other == ceiling.body){
+						newBall.destroy();
+						elements.remove(newBall);
+						newBall = null;
 					}
 					setTimeout(animateCallback, 16);
 				};
@@ -129,24 +130,26 @@
 		var doSleep = true;
 		var world = new b2World(worldAABB, gravity, doSleep);
 		var ball = new Circle(world, 20);
-		var otherBall = new Circle(world, 20);
 		var floor = new Box(world, window.innerWidth, 10);
 		var ceiling = new Box(world, window.innerWidth, 10);
 		var leftWall = new Box(world, 10, window.innerHeight);
 		var rightWall = new Box(world, 10, window.innerHeight);
+		var newBall = null;
 		ball.setPosition(100, 100);
-		otherBall.setPosition(200, 100);
 		floor.setPosition(window.innerWidth*0.5, window.innerHeight-5);
 		ceiling.setPosition(window.innerWidth*0.5, 5);
 		leftWall.setPosition(5, window.innerHeight*0.5);
 		rightWall.setPosition(window.innerWidth-5, window.innerHeight*0.5);
-		var elements = [ball, otherBall, floor, ceiling, leftWall, rightWall];
+		var elements = [ball, floor, ceiling, leftWall, rightWall];
 		animate(world, elements);
 		setTimeout(function() {
 			ball.body.ApplyImpulse(new b2Vec2(1000000, 0), new b2Vec2(0, 0));
 		}, 1000);
 		window.addEventListener('click', function(e) {
-			var newBall = new Circle(world, 20);
+			if(newBall){
+				return;
+			}
+			newBall = new Circle(world, 20);
 			newBall.setPosition(e.clientX, e.clientY);
 			newBall.body.ApplyImpulse(new b2Vec2(0, -2000000), new b2Vec2(e.clientX, e.clientY));
 			elements.push(newBall);
