@@ -79,8 +79,8 @@
 				self.height = height;
 				self.box = document.createElement('div');
 				self.box.className = 'box';
-				self.box.style.width = width + 'px';
-				self.box.style.minHeight = height + 'px';
+				self.box.style.width = (2*width) + 'px';
+				self.box.style.minHeight = (2*height) + 'px';
 				document.body.appendChild(self.box);
 				if (typeof(fixed) == 'undefined') fixed = true;
 				var boxSd = new b2BoxDef();
@@ -96,8 +96,8 @@
 			};
 
 			this.updateView = function() {
-				this.box.style.left = (this.body.m_position.x - width*0.5) + 'px';
-				this.box.style.top = (this.body.m_position.y - height*0.5) + 'px';
+				this.box.style.left = (this.body.m_position.x - width) + 'px';
+				this.box.style.top = (this.body.m_position.y - height) + 'px';
 			};
 
 			this.destroy = function() {
@@ -144,20 +144,38 @@
 		worldAABB.maxVertex.Set(window.innerWidth + 200, window.innerHeight + 200);
 		var gravity = new b2Vec2(1, 0);
 		setupCannon();
+
 		var doSleep = true;
 		var world = new b2World(worldAABB, gravity, doSleep);
+		world.SetFilter({
+			ShouldCollide: function(shape1, shape2) {
+				if (newBall == null) {
+					return true;
+				}
+				if ((shape1.m_body == box.body && shape2.m_body == newBall.body) ||
+					(shape2.m_body == box.body && shape1.m_body == newBall.body)) {
+						return false;
+				}
+				return true;
+			}
+		});
 		var ball = new Circle(world, 20);
-		var floor = new Box(world, window.innerWidth, 10);
-		var ceiling = new Box(world, window.innerWidth, 10);
-		var leftWall = new Box(world, 10, window.innerHeight);
-		var rightWall = new Box(world, 10, window.innerHeight);
+		var floor = new Box(world, window.innerWidth*0.5, 5);
+		var ceiling = new Box(world, window.innerWidth*0.5, 5);
+		var leftWall = new Box(world, 5, window.innerHeight*0.5);
+		var rightWall = new Box(world, 5, window.innerHeight*0.5);
 		var newBall = null;
 		ball.setPosition(100, 100);
 		floor.setPosition(window.innerWidth*0.5, window.innerHeight-5);
 		ceiling.setPosition(window.innerWidth*0.5, 5);
 		leftWall.setPosition(5, window.innerHeight*0.5);
 		rightWall.setPosition(window.innerWidth-5, window.innerHeight*0.5);
-		var elements = [ball, floor, ceiling, leftWall, rightWall];
+
+		//Box
+		var box = new Box(world, 0.4 * window.innerWidth, 50);
+		box.setPosition(window.innerWidth*0.5, window.innerHeight*0.5);
+
+		var elements = [ball, floor, ceiling, leftWall, rightWall, box];
 		animate(world, elements);
 		setTimeout(function() {
 			ball.body.ApplyImpulse(new b2Vec2(1000000, 0), new b2Vec2(100, 100));
@@ -171,6 +189,7 @@
 			newBall.body.ApplyImpulse(new b2Vec2(0, -2000000), new b2Vec2(e.clientX, e.clientY));
 			elements.push(newBall);
 		}, false);
+
 	//]]>
 	</script>
 </html>
