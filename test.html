@@ -28,6 +28,7 @@
 	<body>
 		<div id="log"></div>
 	</body>
+	<script type="text/javascript" language="javascript" src="js_bintrees.min.js"></script>
 	<script type="text/javascript" language="javascript" charset="utf-8">
 	//<![CDATA[
 		Array.prototype.remove = function(index) {
@@ -71,16 +72,25 @@
 			}
 		}
 
+		var SectionComparator = function(section1, section2) {
+			if (section1.endT <= section2.initialT) {
+				return -1;
+			}
+			if (section1.initialT >= section2.endT) {
+				return 1;
+			}
+			return 0;
+		};
+
 		function Circuit() {
 			this.sections = [];
+			this.sectionsTree = new RBTree(SectionComparator);
 
 			this.positionAt = function(t) {
-				for (var i = this.sections.length - 1; i >= 0; i--) {
-					if (this.sections[i].t0 < t) {
-						//console.log(this.sections[i]);
-						var relativeT = (t - this.sections[i].t0) / this.sections[i].relativeLength;
-						return this.sections[i].section.positionAt(relativeT);
-					}
+				var currentSection = this.sectionsTree.find({initialT: t, endT: t});
+				if (currentSection) {
+					var relativeT = (t - currentSection.initialT) / currentSection.relativeLength;
+					return currentSection.section.positionAt(relativeT);
 				}
 				return {x: 0, y: 0};
 			};
@@ -90,18 +100,19 @@
 				for (var i = 0; i < this.sections.length; i++) {
 					this.totalLength += this.sections[i].section.length;
 				}
-				var t0 = 0;
+				var initialT = 0;
 				for (var i = 0; i < this.sections.length; i++) {
 					this.sections[i].relativeLength = this.sections[i].section.length / this.totalLength;
-					this.sections[i].t0 = t0;
-					t0 += this.sections[i].relativeLength;
+					this.sections[i].initialT = initialT;
+					initialT += this.sections[i].relativeLength;
+					this.sections[i].endT = initialT;
 				}
 			};
 
 			this.addSection = function(section) {
 				this.sections.push({section: section});
 				this.updateLengths();
-				console.log(this.sections);
+				this.sectionsTree.insert(this.sections[this.sections.length - 1]);
 			};
 
 			this.toRelativeDistance = function(absoluteDistance) {
