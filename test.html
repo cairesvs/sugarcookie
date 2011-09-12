@@ -16,10 +16,17 @@
 			body {
 				overflow: hidden;
 			}
+			#log {
+				bottom: 0px;
+				position: absolute;
+				z-index: 99999;
+				color: red;
+				background: black;
+			}
 		</style>
 	</head>
 	<body>
-		<div id="ball"></div>
+		<div id="log"></div>
 	</body>
 	<script type="text/javascript" language="javascript" charset="utf-8">
 	//<![CDATA[
@@ -31,15 +38,90 @@
 			this.pop();
 		};
 
+		function StraightSection(start, end) {
+			this.positionAt = function(t) {
+				return {
+					x: start.x + (end.x - start.x) * t,
+					y: start.y + (end.y - start.y) * t
+				};
+			}
+
+			this.length = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+		}
+
+		CurveSectionOrientation = {
+			CW: 1,
+			CCW: -1
+		};
+
+		function CurveSection(center, start, angleSection, orientation) {
+			this.radius = Math.sqrt(Math.pow(start.x - center.x, 2) + Math.pow(start.y - center.y, 2));
+			this.length = this.radius * angleSection;
+			this.initialAngle = Math.acos((start.x - center.x) / this.radius);
+
+			if (start.y > center.y) {
+				this.initialAngle += Math.PI;
+			}
+
+			this.positionAt = function(t) {
+				return {
+					x: center.x - Math.cos(orientation * t * angleSection + this.initialAngle) * this.radius,
+					y: center.y - Math.sin(orientation * t * angleSection + this.initialAngle) * this.radius,
+				};
+			}
+		}
+
+		function Circuit() {
+			this.sections = [];
+
+			this.positionAt = function(t) {
+				for (var i = this.sections.length - 1; i >= 0; i--) {
+					if (this.sections[i].t0 < t) {
+						//console.log(this.sections[i]);
+						var relativeT = (t - this.sections[i].t0) / this.sections[i].relativeLength;
+						return this.sections[i].section.positionAt(relativeT);
+					}
+				}
+				return {x: 0, y: 0};
+			};
+
+			this.updateLengths = function() {
+				this.totalLength = 0;
+				for (var i = 0; i < this.sections.length; i++) {
+					this.totalLength += this.sections[i].section.length;
+				}
+				var t0 = 0;
+				for (var i = 0; i < this.sections.length; i++) {
+					this.sections[i].relativeLength = this.sections[i].section.length / this.totalLength;
+					this.sections[i].t0 = t0;
+					t0 += this.sections[i].relativeLength;
+				}
+			};
+
+			this.addSection = function(section) {
+				this.sections.push({section: section});
+				this.updateLengths();
+				console.log(this.sections);
+			};
+
+			this.toRelativeDistance = function(absoluteDistance) {
+				return absoluteDistance / this.totalLength;
+			};
+		}
+
 		function Circle(radius) {
 			this.updateView = function() {
 				this.circle.style.left = (this.x - radius) + 'px';
 				this.circle.style.top = (this.y - radius) + 'px';
 			};
 
-			this.setPosition = function(t) {
-				this.x = Math.sin(t * Math.PI * 2) * window.innerWidth * 0.5 + window.innerWidth*0.5;
-				this.y = t * window.innerHeight;
+			this.setPosition = function(position) {
+				var lastX = this.x;
+				var lastY = this.y;
+				this.x = position.x;
+				this.y = position.y;
+				var v = Math.sqrt(Math.pow(lastX - this.x, 2) + Math.pow(lastY - this.y, 2));
+				document.getElementById('log').innerHTML = "v=" + v;
 				this.updateView();
 			};
 
@@ -59,7 +141,7 @@
 			};
 		}
 
-		function Box(width, height, fixed) {
+		function Box(width, height) {
 			(function(self) {
 				self.x = 0;
 				self.y = 0;
@@ -70,7 +152,6 @@
 				self.box.style.width = width + 'px';
 				self.box.style.minHeight = height + 'px';
 				document.body.appendChild(self.box);
-				if (typeof(fixed) == 'undefined') fixed = true;
 			})(this);
 			
 			this.updateView = function() {
@@ -112,18 +193,35 @@
 		var ceiling = new Box(window.innerWidth, 10);
 		var leftWall = new Box(10, window.innerHeight);
 		var rightWall = new Box(10, window.innerHeight);
+		var circuit = new Circuit();
+		circuit.addSection(new StraightSection({x: 200, y: 100}, {x: 500, y: 100}));
+		circuit.addSection(new CurveSection({x: 500, y: 200}, {x: 500, y: 100}, Math.PI, CurveSectionOrientation.CW));
+		circuit.addSection(new StraightSection({x: 500, y: 300}, {x: 200, y: 300}));
+		circuit.addSection(new CurveSection({x: 200, y: 400}, {x: 200, y: 300}, Math.PI, CurveSectionOrientation.CCW));
+		circuit.addSection(new StraightSection({x: 200, y: 500}, {x: 500, y: 500}));
+		circuit.addSection(new StraightSection({x: 500, y: 500}, {x: 700, y: 300}));
 		floor.setPosition(window.innerWidth*0.5, window.innerHeight-5);
 		ceiling.setPosition(window.innerWidth*0.5, 5);
 		leftWall.setPosition(5, window.innerHeight*0.5);
 		rightWall.setPosition(window.innerWidth-5, window.innerHeight*0.5);
 
+		function updateAllBalls(t) {
+			var relativeDistance = circuit.toRelativeDistance(40);
+			for (var i = 0; i < balls.length; i++) {
+				balls[i].setPosition(circuit.positionAt(t - i * relativeDistance));
+			}
+		}
+
+		//window.addEventListener('mousemove', function(e) {
+		//	t = e.clientY / window.innerHeight;
+		//	updateAllBalls(t);
+		//}, false);
+
 		var t = 0;
 		setInterval(function() {
 			t += 0.005;
-			for (var i = 0; i < balls.length; i++) {
-				balls[i].setPosition(t - i*0.01);
-			}
-			if (t > 1) t = 0;
+			updateAllBalls(t);
+			if (t > 1) t = 0.0;
 		}, 16);
 	//]]>
 	</script>
