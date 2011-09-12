@@ -3,13 +3,12 @@
 		<title>Test</title>
 		<style type="text/css" media="screen">
 			.circle {
-				border: 1px solid black;
+				border: 2px solid black;
 				background-color: red;
 				position: absolute;
-				min-height: 20px;
 			}
 			.box {
-				border: 1px solid black;
+				border: 2px solid black;
 				background-color: blue;
 				position: absolute;
 			}
@@ -26,7 +25,7 @@
 		</style>
 	</head>
 	<body>
-		<div id="log"></div>
+		<div id="log">Click to add more balls</div>
 	</body>
 	<script type="text/javascript" language="javascript" src="js_bintrees.min.js"></script>
 	<script type="text/javascript" language="javascript" charset="utf-8">
@@ -83,91 +82,106 @@
 		};
 
 		function Circuit() {
-			this.sections = [];
-			this.sectionsTree = new RBTree(SectionComparator);
+			(function(self) {
+				var sections = [];
+				var sectionsTree = new RBTree(SectionComparator);
+				var totalLength = 0;
 
-			this.positionAt = function(t) {
-				var currentSection = this.sectionsTree.find({initialT: t, endT: t});
-				if (currentSection) {
-					var relativeT = (t - currentSection.initialT) / currentSection.relativeLength;
-					return currentSection.section.positionAt(relativeT);
-				}
-				return {x: 0, y: 0};
-			};
+				var updateLengths = function() {
+					totalLength = 0;
+					for (var i = 0; i < sections.length; i++) {
+						totalLength += sections[i].section.length;
+					}
+					var initialT = 0;
+					for (var i = 0; i < sections.length; i++) {
+						sections[i].relativeLength = sections[i].section.length / totalLength;
+						sections[i].initialT = initialT;
+						initialT += sections[i].relativeLength;
+						sections[i].endT = initialT;
+					}
+				};
 
-			this.updateLengths = function() {
-				this.totalLength = 0;
-				for (var i = 0; i < this.sections.length; i++) {
-					this.totalLength += this.sections[i].section.length;
-				}
-				var initialT = 0;
-				for (var i = 0; i < this.sections.length; i++) {
-					this.sections[i].relativeLength = this.sections[i].section.length / this.totalLength;
-					this.sections[i].initialT = initialT;
-					initialT += this.sections[i].relativeLength;
-					this.sections[i].endT = initialT;
-				}
-			};
+				self.positionAt = function(t) {
+					var currentSection = sectionsTree.find({initialT: t, endT: t});
+					if (currentSection) {
+						var relativeT = (t - currentSection.initialT) / currentSection.relativeLength;
+						return currentSection.section.positionAt(relativeT);
+					}
+					return {x: -1000, y: -1000};
+				};
 
-			this.addSection = function(section) {
-				this.sections.push({section: section});
-				this.updateLengths();
-				this.sectionsTree.insert(this.sections[this.sections.length - 1]);
-			};
+				self.addSection = function(section) {
+					sections.push({section: section});
+					updateLengths();
+					sectionsTree.insert(sections[sections.length - 1]);
+				};
 
-			this.toRelativeDistance = function(absoluteDistance) {
-				return absoluteDistance / this.totalLength;
-			};
+				self.toRelativeDistance = function(absoluteDistance) {
+					return absoluteDistance / totalLength;
+				};
+			})(this);
+		}
+
+		function CircleView(circle) {
+			(function(self) {
+				self.element = document.createElement('div');
+				self.element.className = 'circle';
+				self.element.style.width = (2 * circle.radius) + 'px';
+				self.element.style.minHeight = (2 * circle.radius) + 'px';
+				self.element.style.borderRadius = circle.radius + 'px';
+				self.element.style.left = '-1000px';
+				document.body.appendChild(self.element);
+			})(this);
+
+			this.update = function() {
+				this.element.style.left = circle.x - circle.radius;
+				this.element.style.top = circle.y - circle.radius;
+			}
 		}
 
 		function Circle(radius) {
+			this.radius = radius;
+			this.view = new CircleView(this);
+
 			this.updateView = function() {
-				this.circle.style.left = (this.x - radius) + 'px';
-				this.circle.style.top = (this.y - radius) + 'px';
+				if (this.view) {
+					this.view.update();
+				}
 			};
 
 			this.setPosition = function(position) {
-				var lastX = this.x;
-				var lastY = this.y;
 				this.x = position.x;
 				this.y = position.y;
-				var v = Math.sqrt(Math.pow(lastX - this.x, 2) + Math.pow(lastY - this.y, 2));
-				document.getElementById('log').innerHTML = "v=" + v;
 				this.updateView();
 			};
-
-			(function(self) {
-				self.circle = document.createElement('div');
-				self.circle.className = 'circle';
-				self.circle.style.width = (2 * radius) + 'px';
-				self.circle.style.minHeight = (2 * radius) + 'px';
-				self.circle.style.borderRadius = radius + 'px';
-				self.circle.style.left = '-1000px';
-				self.setPosition(0);
-				document.body.appendChild(self.circle);
-			})(this);
 
 			this.destroy = function() {
 				document.body.removeChild(this.circle);
 			};
 		}
 
-		function Box(width, height) {
+		function BoxView(box) {
 			(function(self) {
-				self.x = 0;
-				self.y = 0;
-				self.width = width;
-				self.height = height;
-				self.box = document.createElement('div');
-				self.box.className = 'box';
-				self.box.style.width = width + 'px';
-				self.box.style.minHeight = height + 'px';
-				document.body.appendChild(self.box);
+				self.element = document.createElement('div');
+				self.element.className = 'box';
+				self.element.style.width = box.width + 'px';
+				self.element.style.minHeight = box.height + 'px';
+				document.body.appendChild(self.element);
 			})(this);
 			
+			this.update = function() {
+				this.element.style.left = box.x - box.width * 0.5;
+				this.element.style.top = box.y - box.height * 0.5;
+			};
+		}
+
+		function Box(width, height) {
+			this.width = width;
+			this.height = height;
+			this.view = new BoxView(this);
+
 			this.updateView = function() {
-				this.box.style.left = (this.x - width*0.5) + 'px';
-				this.box.style.top = (this.y - height*0.5) + 'px';
+				this.view.update();
 			};
 
 			this.setPosition = function(x, y) {
@@ -197,7 +211,7 @@
 			}, false);
 		}
 
-		//setupCannon();
+		setupCannon();
 
 		var balls = [new Circle(20), new Circle(20), new Circle(20)];
 		var floor = new Box(window.innerWidth, 10);
@@ -217,23 +231,22 @@
 		rightWall.setPosition(window.innerWidth-5, window.innerHeight*0.5);
 
 		function updateAllBalls(t) {
-			var relativeDistance = circuit.toRelativeDistance(40);
+			var relativeDistance = circuit.toRelativeDistance(44);
 			for (var i = 0; i < balls.length; i++) {
 				balls[i].setPosition(circuit.positionAt(t - i * relativeDistance));
 			}
 		}
 
-		//window.addEventListener('mousemove', function(e) {
-		//	t = e.clientY / window.innerHeight;
-		//	updateAllBalls(t);
-		//}, false);
-
 		var t = 0;
 		setInterval(function() {
-			t += 0.005;
+			t += 0.0025;
 			updateAllBalls(t);
 			if (t > 1) t = 0.0;
 		}, 16);
+
+		window.addEventListener('click', function() {
+			balls.push(new Circle(20));
+		}, false);
 	//]]>
 	</script>
 </html>
