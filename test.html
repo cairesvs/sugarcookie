@@ -62,14 +62,22 @@
 			if (start.y > center.y) {
 				this.initialAngle += Math.PI;
 			}
-
-			this.positionAt = function(t) {
-				return {
+                                                      
+			this.positionAt = function(t) {           
+				return {                              
 					x: center.x - Math.cos(orientation * t * angleSection + this.initialAngle) * this.radius,
 					y: center.y - Math.sin(orientation * t * angleSection + this.initialAngle) * this.radius,
-				};
+				};                                    
+			}                                         
+			                                          
+			this.endPoint = function() {              
+				return {
+					y: center.y - Math.sin(orientation * angleSection + this.initialAngle) * this.radius,													
+					x: center.x - Math.cos(orientation * angleSection + this.initialAngle) * this.radius,
+				}				
 			}
 		}
+		
 
 		var SectionComparator = function(section1, section2) {
 			if (section1.endT <= section2.initialT) {
@@ -220,10 +228,16 @@
 		var rightWall = new Box(10, window.innerHeight);
 		var circuit = new Circuit();
 		circuit.addSection(new StraightSection({x: 200, y: 100}, {x: 500, y: 100}));
-		circuit.addSection(new CurveSection({x: 500, y: 200}, {x: 500, y: 100}, Math.PI, CurveSectionOrientation.CW));
-		circuit.addSection(new StraightSection({x: 500, y: 300}, {x: 200, y: 300}));
-		circuit.addSection(new CurveSection({x: 200, y: 400}, {x: 200, y: 300}, Math.PI, CurveSectionOrientation.CCW));
-		circuit.addSection(new StraightSection({x: 200, y: 500}, {x: 500, y: 500}));
+		
+		var firstCurve = new CurveSection({x: 500, y: 200}, {x: 500, y: 100}, Math.PI, CurveSectionOrientation.CW);
+		circuit.addSection(firstCurve);
+		
+		circuit.addSection(new StraightSection(firstCurve.endPoint(), {x: 200, y: 300}));
+		
+		var secondCurve = new CurveSection({x: 200, y: 400}, {x: 200, y: 300}, Math.PI, CurveSectionOrientation.CCW);
+		circuit.addSection(secondCurve);
+		
+		circuit.addSection(new StraightSection(secondCurve.endPoint(), {x: 500, y: 500}));
 		circuit.addSection(new StraightSection({x: 500, y: 500}, {x: 700, y: 300}));
 		floor.setPosition(window.innerWidth*0.5, window.innerHeight-5);
 		ceiling.setPosition(window.innerWidth*0.5, 5);
