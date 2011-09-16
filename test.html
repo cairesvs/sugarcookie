@@ -38,15 +38,23 @@
 			this.pop();
 		};
 
-		function StraightSection(start, end) {
+		function StraightSection(start, lenght, angle) {
+			this.length = length;
+
 			this.positionAt = function(t) {
 				return {
-					x: start.x + (end.x - start.x) * t,
-					y: start.y + (end.y - start.y) * t
+					x: start.x + (lenght * Math.cos(angle) - start.x) * t,
+					y: start.y + (lenght * Math.sin(angle) - start.y) * t
+					
 				};
 			}
-
-			this.length = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+			
+			this.endPoint = function() {              
+				return {
+					x: start.x + lenght * Math.cos(angle),
+					y: start.y + lenght * Math.sin(angle)
+				};				
+			}
 		}
 
 		CurveSectionOrientation = {
@@ -227,18 +235,24 @@
 		var leftWall = new Box(10, window.innerHeight);
 		var rightWall = new Box(10, window.innerHeight);
 		var circuit = new Circuit();
-		circuit.addSection(new StraightSection({x: 200, y: 100}, {x: 500, y: 100}));
 		
-		var firstCurve = new CurveSection({x: 500, y: 200}, {x: 500, y: 100}, Math.PI, CurveSectionOrientation.CW);
+		var firstLine = new StraightSection({x: 200, y: 100}, 300, 0);
+		circuit.addSection(firstLine);
+		
+		var firstCurve = new CurveSection(firstLine.endPoint(), {x: 500, y: 100}, Math.PI, CurveSectionOrientation.CW);
 		circuit.addSection(firstCurve);
 		
-		circuit.addSection(new StraightSection(firstCurve.endPoint(), {x: 200, y: 300}));
+		var secondLine = new StraightSection(firstCurve.endPoint(), 300, Math.PI);
+		circuit.addSection(secondLine);
 		
-		var secondCurve = new CurveSection({x: 200, y: 400}, {x: 200, y: 300}, Math.PI, CurveSectionOrientation.CCW);
+		var secondCurve = new CurveSection(secondLine.endPoint(), {x: 200, y: 300}, Math.PI, CurveSectionOrientation.CCW);
 		circuit.addSection(secondCurve);
 		
-		circuit.addSection(new StraightSection(secondCurve.endPoint(), {x: 500, y: 500}));
-		circuit.addSection(new StraightSection({x: 500, y: 500}, {x: 700, y: 300}));
+		var thirdLine = new StraightSection(secondCurve.endPoint(), 300, 0);
+		circuit.addSection(thirdLine);
+		
+		circuit.addSection(new StraightSection(thirdLine.endPoint(), 200, Math.PI/4));
+		
 		floor.setPosition(window.innerWidth*0.5, window.innerHeight-5);
 		ceiling.setPosition(window.innerWidth*0.5, 5);
 		leftWall.setPosition(5, window.innerHeight*0.5);
